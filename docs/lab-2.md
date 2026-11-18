@@ -12,7 +12,7 @@ Oggi ShipBoard fa il viaggio completo: Dockerfile, immagine costruita da GitHub 
   ```
 - Gli LLM servono per farsi spiegare un errore, non per scrivere la soluzione. Tutto quello che serve oggi e' in questo file, nei link alla documentazione e negli script in `infra/`.
 
-## 0. Riallineamento Docker (mattina)
+## 0. Riallineamento Docker (prima ora)
 
 **Tutti**, prima di partire:
 
@@ -32,7 +32,7 @@ In `docs/esempi/dockerfile-rotti/` ci sono 7 Dockerfile per l'API, ognuno con un
 ./docs/esempi/dockerfile-rotti/verifica.sh 1
 ```
 
-Chi finisce prima: aiutate una coppia vicina **senza toccare la sua tastiera**, poi provate le sfide.
+Avete 40 minuti: fate piu' casi possibile. Chi finisce prima: aiutate una coppia vicina **senza toccare la sua tastiera**, poi provate le sfide.
 
 **Sfide per chi e' avanti**
 - Aggiungete un `healthcheck` al servizio `api` in `compose.yaml` e fate dipendere `web` da `api` con `condition: service_healthy`. Problema: l'immagine chiseled non ha ne' shell ne' `curl`. Come fate?
