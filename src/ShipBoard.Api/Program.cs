@@ -1,5 +1,8 @@
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using ShipBoard.Api;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +17,27 @@ builder.Services.AddDbContext<ShipBoardDb>(options =>
     else
         options.UseNpgsql(connectionString);
 });
+
+// OpenTelemetry: log, tracce e metriche. Il nome del servizio arriva da OTEL_SERVICE_NAME.
+builder.Logging.AddOpenTelemetry(logging =>
+{
+    logging.IncludeFormattedMessage = true;
+    logging.IncludeScopes = true;
+});
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddSource(Telemetry.Name)
+        .AddSource("Npgsql") // le query SQL verso PostgreSQL
+        .AddAspNetCoreInstrumentation(o => o.Filter = ctx => ctx.Request.Path != "/health")
+        .AddHttpClientInstrumentation())
+    .WithMetrics(metrics => metrics
+        .AddMeter(Telemetry.Name)
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation());
+
+// Esporta in OTLP solo se qualcuno ci dice dove (OTEL_EXPORTER_OTLP_ENDPOINT): in locale la dashboard di Aspire.
+if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+    builder.Services.AddOpenTelemetry().UseOtlpExporter();
 
 builder.Services.AddHealthChecks().AddDbContextCheck<ShipBoardDb>();
 builder.Services.ConfigureHttpJsonOptions(o =>
