@@ -1,4 +1,6 @@
 using System.Text.Json.Serialization;
+using Azure.Identity;
+using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
@@ -35,8 +37,20 @@ builder.Services.AddOpenTelemetry()
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation());
 
-// Esporta in OTLP solo se qualcuno ci dice dove (OTEL_EXPORTER_OTLP_ENDPOINT): in locale la dashboard di Aspire.
-if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+// Dove mandare la telemetria? Stesso codice, destinazione decisa dalla configurazione:
+// - su Azure: Application Insights (APPLICATIONINSIGHTS_CONNECTION_STRING nelle impostazioni dell'App Service)
+// - in locale: la dashboard di Aspire via OTLP (OTEL_EXPORTER_OTLP_ENDPOINT, impostata dall'AppHost)
+if (!string.IsNullOrWhiteSpace(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
+{
+    builder.Services.AddOpenTelemetry().UseAzureMonitor(o =>
+    {
+        // RBAC: con APPLICATIONINSIGHTS_AUTH=managed-identity l'app si autentica con la sua identita'
+        // (ruolo "Monitoring Metrics Publisher"), non con la chiave della connection string.
+        if (builder.Configuration["APPLICATIONINSIGHTS_AUTH"] == "managed-identity")
+            o.Credential = new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned);
+    });
+}
+else if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
     builder.Services.AddOpenTelemetry().UseOtlpExporter();
 
 builder.Services.AddHealthChecks().AddDbContextCheck<ShipBoardDb>();
