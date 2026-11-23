@@ -26,11 +26,15 @@ public static class TicketEndpoints
     {
         var tickets = app.MapGroup("/tickets");
 
-        tickets.MapGet("/", async (ShipBoardDb db, Priority? priority) =>
-            await db.Tickets
+        tickets.MapGet("/", async (ShipBoardDb db, Priority? priority, ILogger<Program> logger) =>
+        {
+            var tickets = await db.Tickets
                 .Where(t => priority == null || t.Priority == priority)
                 .OrderByDescending(t => t.CreatedAt)
-                .ToListAsync());
+                .ToListAsync();
+            logger.LogInformation("Tickets count {Count}", tickets.Count());
+            return tickets;
+        });
 
         tickets.MapGet("/{id:int}", async (int id, ShipBoardDb db) =>
             await db.Tickets.FindAsync(id) is { } t ? Results.Ok(t) : Results.NotFound());
